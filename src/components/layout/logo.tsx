@@ -13,7 +13,7 @@ export function Logo({ className }: { className?: string }) {
         <ShoppingBasket className="h-5 w-5" aria-hidden="true" />
       </span>
       <span>
-        Green<span className="text-brand-600">grocer</span>
+        Green<span className="text-brand-600">store</span>
       </span>
     </Link>
   )
