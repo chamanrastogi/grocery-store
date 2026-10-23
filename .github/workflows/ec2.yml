@@ -13,7 +13,19 @@ jobs:
       EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
     steps:
-      - name: Deploy to EC2
+      - name: Checkout repository
+        uses: actions/checkout@v4    
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+            node-version: 24
+            cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install        
+  
+      - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -21,12 +33,10 @@ jobs:
           chmod 600 ~/.ssh/ec2.pem
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-          ssh -i ~/.ssh/ec2.pem "ec2-user@$EC2_HOST" 'bash -se' <<'EOF'
-          APP="/home/ec2-user/grocery-store"
-          if [ -d "$APP/.git" ]; then
-            cd "$APP"
-            git pull --ff-only origin master
-          else
-            git clone -b master "https://github.com/${{ github.repository }}.git" "$APP"
-          fi
-          EOF
+      - name: Copy build to EC2
+        run: |
+          ssh -i ~/.ssh/ec2.pem "ec2-user@$EC2_HOST" \
+            'mkdir -p /home/ec2-user/grocery-store/dist'
+
+          scp -i ~/.ssh/ec2.pem -r dist/. \
+            "ec2-user@$EC2_HOST:/home/ec2-user/grocery-store/dist/"
