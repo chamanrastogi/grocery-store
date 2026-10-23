@@ -1,36 +1,48 @@
 name: Deploy webapp Website to EC2
-on: 
-    push:
 
-    workflow_dispatch:
-      
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     env:
       EC2_HOST: ${{ secrets.EC2_HOST }}
       EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4    
-      
+        uses: actions/checkout@v5
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-            node-version: 24
-            cache: 'npm'
+          node-version: 24
+          cache: npm
 
       - name: Install dependencies
-        run: npm install        
-  
+        run: npm install
+
+      - name: Build React application
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          pwd
+          ls -la
+          test -f dist/index.html
+          ls -la dist/
+
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
+
           printf '%s\n' "$EC2_SSH_KEY" | tr -d '\r' > ~/.ssh/ec2.pem
           chmod 600 ~/.ssh/ec2.pem
+
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
       - name: Clean remote deployment folder
@@ -40,5 +52,7 @@ jobs:
             'rm -rf /home/ec2-user/grocery-store/dist &&
              mkdir -p /home/ec2-user/grocery-store/dist'
 
+      - name: Copy build to EC2
+        run: |
           scp -i ~/.ssh/ec2.pem -r dist/. \
             "ec2-user@$EC2_HOST:/home/ec2-user/grocery-store/dist/"
